@@ -22,6 +22,8 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  final List<Map<String, String>> _chatHistory = [];
+
   List<types.Message> _messages = [];
   final _user = const types.User(
     id: '82091008-a484-4a89-ae75-a22bf8d6f3ac',
@@ -187,15 +189,64 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
-  void _handleSendPressed(types.PartialText message) {
+  Future<void> _handleSendPressed(types.PartialText message) async {
     final textMessage = types.TextMessage(
       author: _user,
       createdAt: DateTime.now().millisecondsSinceEpoch,
       id: const Uuid().v4(),
       text: message.text,
     );
-    //MyHttpClient.post(url, data)
     _addMessage(textMessage);
+    print("message: $textMessage");
+    _chatHistory.add({"role": "user", "content": message.text});
+    final response = await MyHttpClient.postStream(
+        "http://127.0.0.1:8080/qianfan/ai/generateStream", _chatHistory);
+
+    final stream =
+        response.stream.transform(utf8.decoder).transform(LineSplitter());
+    List<String> eventDataList = [];
+    stream.listen(
+      (event) {
+        if (event.startsWith('data:')) {
+          final data = event.substring(5); // 解析 SSE 数据
+          print('Received event: $data');
+          eventDataList.add(data); // 将数据添加到缓冲区
+        }
+      },
+      onDone: () {
+        // 处理最终结果
+        print('Stream is done');
+        try {
+          var userId = '';
+          StringBuffer buffer = StringBuffer();
+          for (var data in eventDataList) {
+            var jsonData = jsonDecode(data);
+            var resultContent = jsonData['result']['output'];
+            userId = resultContent['metadata']['id'];
+            print('Result content: $resultContent');
+            buffer.write(resultContent["content"]);
+          }
+
+          // 保存AI回复到聊天记录
+          _chatHistory.add({"role": "assistant", "content": buffer.toString()});
+
+          final resultMessage = types.TextMessage(
+            author: types.User(
+              id: userId,
+            ),
+            createdAt: DateTime.now().millisecondsSinceEpoch,
+            id: const Uuid().v4(),
+            text: buffer.toString(),
+          );
+          _addMessage(resultMessage);
+        } catch (e) {
+          print('Error parsing JSON: $e');
+        }
+      },
+      onError: (error) {
+        print('Stream error: $error');
+      },
+    );
   }
 
   void _loadMessages() async {

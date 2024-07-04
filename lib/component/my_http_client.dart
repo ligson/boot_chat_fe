@@ -33,6 +33,7 @@ class MyHttpClient {
             data: data, options: Options(method: method, headers: headers))
         .then((Response<dynamic> value) {
       dynamic returnData = value.data;
+      print("returnData: ${returnData}");
       if (returnData["success"]) {
         //print("biz success:${value}");
         return Future.value(returnData["data"]);
@@ -67,6 +68,42 @@ class MyHttpClient {
     });
   }
 
+  static Future<http.StreamedResponse> streamRequest(String method, String url, bool containToken,
+      {dynamic data}) async {
+    try {
+      String reqUrl = ChatConfig.baseUrl + url;
+      if (url.startsWith("http")) {
+        reqUrl = url;
+      }
+      print("访问 URL:" + reqUrl);
+      Map<String, String> headers = {};
+      if (containToken) {
+        //String? token = await MyLocalStorage.getData("token");
+        //print("token:${token}");
+        //if (token != null) {
+        headers["Authorization"] = "ok";
+        //}
+      }
+      headers['Accept'] = 'text/event-stream';
+
+      final client = http.Client();
+      final request = http.Request('POST', Uri.parse(reqUrl))
+        ..headers['Accept'] = 'text/event-stream'
+        ..headers['Content-Type'] = 'application/json'
+        ..body = jsonEncode(data);
+
+      final response = await client.send(request);
+
+      //print('Response status: ${response.statusCode}');
+      //print('Response data: ${response.data}');
+
+      return Future.value(response);
+    } catch (e) {
+      print('Error: $e');
+      return Future.error(e);
+    }
+  }
+
   static Future<dynamic> get(String url) async {
     return request('GET', url, true);
   }
@@ -77,6 +114,10 @@ class MyHttpClient {
 
   static Future<dynamic> post(String url, dynamic data) async {
     return request('POST', url, true, data: data);
+  }
+
+  static Future<http.StreamedResponse> postStream(String url, dynamic data) async {
+    return streamRequest('POST', url, true, data: data);
   }
 
   static Future<dynamic> postNoToken(String url, dynamic data) async {
