@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:boot_chat_fe/config.dart';
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
+import 'package:boot_chat_fe/component/local_storage.dart';
 
 class MyHttpClient {
   static final Dio _dio = _init();
@@ -22,11 +23,12 @@ class MyHttpClient {
     print("访问 URL:" + reqUrl);
     Map<String, String> headers = {};
     if (containToken) {
-      //String? token = await MyLocalStorage.getData("token");
-      //print("token:${token}");
-      //if (token != null) {
-      headers["Authorization"] = "ok";
-      //}
+      String? token = await MyLocalStorage.getData("token");
+      print("token:${token}");
+      if (token != null) {
+        headers["Authorization"] = token;
+        // headers["Authorization"] = "ok";
+      }
     }
     return _dio
         .request(reqUrl,
@@ -68,7 +70,8 @@ class MyHttpClient {
     });
   }
 
-  static Future<http.StreamedResponse> streamRequest(String method, String url, bool containToken,
+  static Future<http.StreamedResponse> streamRequest(
+      String method, String url, bool containToken,
       {dynamic data}) async {
     try {
       String reqUrl = ChatConfig.baseUrl + url;
@@ -116,7 +119,8 @@ class MyHttpClient {
     return request('POST', url, true, data: data);
   }
 
-  static Future<http.StreamedResponse> postStream(String url, dynamic data) async {
+  static Future<http.StreamedResponse> postStream(
+      String url, dynamic data) async {
     return streamRequest('POST', url, true, data: data);
   }
 
@@ -131,11 +135,11 @@ class MyHttpClient {
     }
     print("访问 URL:" + reqUrl);
     Map<String, String> headers = {};
-    //String? token = await MyLocalStorage.getData("token");
-    //print("token:${token}");
-    //if (token != null) {
-    //headers["Authorization"] = token;
-    //}
+    String? token = await MyLocalStorage.getData("token");
+    print("token:${token}");
+    if (token != null) {
+    headers["Authorization"] = token;
+    }
     var request = http.MultipartRequest('POST', Uri.parse(reqUrl));
     request.headers.addAll(headers);
     request.files.add(file);
