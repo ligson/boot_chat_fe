@@ -9,6 +9,7 @@ import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:mime/mime.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -26,8 +27,9 @@ class _ChatPageState extends State<ChatPage> {
 
   List<types.Message> _messages = [];
   final _user = const types.User(
-    id: '82091008-a484-4a89-ae75-a22bf8d6f3ac',
+    id: '38c16ab22ecb4f97b6cbf5908b57233a',
   );
+  late var _lastAnswer = "";
 
   @override
   void initState() {
@@ -198,9 +200,9 @@ class _ChatPageState extends State<ChatPage> {
     );
     _addMessage(textMessage);
     print("message: $textMessage");
-    _chatHistory.add({"role": "user", "content": message.text});
-    final response = await MyHttpClient.postStream(
-        "http://127.0.0.1:8080/qianfan/ai/generateStream", _chatHistory);
+    final chatmsg = {"lastAnswer": _lastAnswer, "problem": message.text};
+    final response =
+        await MyHttpClient.postStream("/qianfan/ai/generateStream", chatmsg);
 
     final stream =
         response.stream.transform(utf8.decoder).transform(LineSplitter());
@@ -250,13 +252,42 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _loadMessages() async {
-    final response = await rootBundle.loadString('assets/messages.json');
-    final messages = (jsonDecode(response) as List)
-        .map((e) => types.Message.fromJson(e as Map<String, dynamic>))
-        .toList();
+    MyHttpClient.post("/api/msg/findByUserId", {}).then((value) {
+      for (int i = 0; i < value["data"].length; i++) {
+        final msg = value["data"][i];
+        print("msg:: " + i.toString() + "     " + msg["createTime"]);
+        DateFormat inputForma = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+
+        if (msg["role"] == "user") {
+          final textMessage = types.TextMessage(
+            author: _user,
+            createdAt:
+                inputForma.parse(msg["createTime"]).millisecondsSinceEpoch,
+            id: msg["id"],
+            text: msg["msg"],
+          );
+          _addMessage(textMessage);
+        } else {
+          _lastAnswer = msg["msg"];
+          final textMessage = types.TextMessage(
+            author: types.User(
+                id: "4c2307ba-3d40-442f-b1ff-b271f63904ca", firstName: "Ai"),
+            createdAt:
+                inputForma.parse(msg["createTime"]).millisecondsSinceEpoch,
+            id: msg["id"],
+            text: msg["msg"],
+          );
+          _addMessage(textMessage);
+        }
+      }
+    });
+    // final response = await rootBundle.loadString('assets/messages.json');
+    // final messages = (jsonDecode(response) as List)
+    //     .map((e) => types.Message.fromJson(e as Map<String, dynamic>))
+    //     .toList();
 
     setState(() {
-      _messages = messages;
+      // _messages = messages;
     });
   }
 

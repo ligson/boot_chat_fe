@@ -80,12 +80,13 @@ class MyHttpClient {
       }
       print("访问 URL:" + reqUrl);
       Map<String, String> headers = {};
+      String? token=null;
       if (containToken) {
-        //String? token = await MyLocalStorage.getData("token");
-        //print("token:${token}");
-        //if (token != null) {
-        headers["Authorization"] = "ok";
-        //}
+        token= await MyLocalStorage.getData("token");
+        print("token:${token}");
+        if (token != null) {
+        headers["Authorization"] = token;
+        }
       }
       headers['Accept'] = 'text/event-stream';
 
@@ -93,6 +94,7 @@ class MyHttpClient {
       final request = http.Request('POST', Uri.parse(reqUrl))
         ..headers['Accept'] = 'text/event-stream'
         ..headers['Content-Type'] = 'application/json'
+        ..headers['Authorization'] = token ?? ''
         ..body = jsonEncode(data);
 
       final response = await client.send(request);

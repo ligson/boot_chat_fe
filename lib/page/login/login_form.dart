@@ -1,3 +1,5 @@
+import 'package:boot_chat_fe/component/page_navigator.dart';
+import 'package:boot_chat_fe/page/main_page.dart';
 import 'package:flutter/material.dart';
 import 'package:boot_chat_fe/component/current_user.dart';
 import 'package:boot_chat_fe/component/dialog_util.dart';
@@ -14,6 +16,7 @@ class LoginForm extends StatefulWidget {
 
 class LoginFormState extends State<LoginForm> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   // TextEditingController _codeController = TextEditingController();
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
@@ -26,10 +29,7 @@ class LoginFormState extends State<LoginForm> {
     super.initState();
     CurrentUser.updateUser().then((value) {
       print("user.....${value}");
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ChatPage()),
-      );
+      PageNavigator.naviateToPage(context, MainPage());
     }).catchError((err) {
       print("用户没有登录...$err");
     });
@@ -50,10 +50,7 @@ class LoginFormState extends State<LoginForm> {
           CurrentUser.updateUser().then((value) {
             print("user:${value}");
             // 执行登录逻辑
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ChatPage()),
-            );
+            PageNavigator.naviateToPage(context, MainPage());
           });
         });
       }).catchError((error) {
@@ -131,10 +128,8 @@ class LoginFormState extends State<LoginForm> {
                 ElevatedButton(
                   onPressed: () {
                     // 在此处添加注册逻辑
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => RegisterPage()),
-                    );
+
+                    PageNavigator.naviateToPage(context, RegisterPage());
                   },
                   child: Text('注册'),
                 ),
