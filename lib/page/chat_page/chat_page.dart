@@ -231,7 +231,6 @@ class _ChatPageState extends State<ChatPage> {
 
           // 保存AI回复到聊天记录
           _chatHistory.add({"role": "assistant", "content": buffer.toString()});
-
           final resultMessage = types.TextMessage(
             author: types.User(
               id: userId,
@@ -241,6 +240,8 @@ class _ChatPageState extends State<ChatPage> {
             text: buffer.toString(),
           );
           _addMessage(resultMessage);
+          MyHttpClient.post(
+              "/api/msg/savemsg", {"lastAnswer": buffer.toString()});
         } catch (e) {
           print('Error parsing JSON: $e');
         }

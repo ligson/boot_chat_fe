@@ -74,7 +74,7 @@ class RegisterFormState extends State<RegisterForm> {
           ),
           SizedBox(height: 16.0),
           TextFormField(
-            controller: _emailController,
+            controller: _nameController,
             decoration: InputDecoration(
               labelText: '昵称',
               hintText: '请输入昵称',
