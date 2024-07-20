@@ -240,8 +240,6 @@ class _ChatPageState extends State<ChatPage> {
             text: buffer.toString(),
           );
           _addMessage(resultMessage);
-          MyHttpClient.post(
-              "/api/msg/savemsg", {"lastAnswer": buffer.toString()});
         } catch (e) {
           print('Error parsing JSON: $e');
         }
