@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:boot_chat_fe/component/my_http_client.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
@@ -200,54 +202,79 @@ class _ChatPageState extends State<ChatPage> {
     );
     _addMessage(textMessage);
     print("message: $textMessage");
-    final chatmsg = {"lastAnswer": _lastAnswer, "problem": message.text};
-    final response =
-        await MyHttpClient.postStream("/qianfan/ai/generateStream", chatmsg);
-
-    final stream =
-        response.stream.transform(utf8.decoder).transform(LineSplitter());
-    List<String> eventDataList = [];
-    stream.listen(
-      (event) {
-        if (event.startsWith('data:')) {
-          final data = event.substring(5); // 解析 SSE 数据
-          print('Received event: $data');
-          eventDataList.add(data); // 将数据添加到缓冲区
-        }
-      },
-      onDone: () {
-        // 处理最终结果
-        print('Stream is done');
-        try {
-          var userId = '';
-          StringBuffer buffer = StringBuffer();
-          for (var data in eventDataList) {
-            var jsonData = jsonDecode(data);
-            var resultContent = jsonData['result']['output'];
-            userId = resultContent['metadata']['id'];
-            print('Result content: $resultContent');
-            buffer.write(resultContent["content"]);
+    final chatmsg = {"problem": message.text};
+    var photo = false;
+    if (message.text.contains('画一幅') ||
+        (message.text.contains("生成") && message.text.contains("图片"))) {
+      photo = true;
+    }
+    if (photo) {
+      MyHttpClient.post("/qianfan/ai/image", chatmsg).then((value) {
+        _chatHistory
+            .add({"role": "assistant", "content": value["image"]});
+        final resultMessage = types.ImageMessage(
+          author: const types.User(
+            id: "4c2307ba-3d40-442f-b1ff-b271f63904ca",
+          ),
+          name: "image.png",
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+          id: const Uuid().v4(),
+          uri: value["image"],
+          size: 10550000,
+        );
+        _addMessage(resultMessage);
+      });
+    } else {
+      final response =
+          await MyHttpClient.postStream("/qianfan/ai/generateStream", chatmsg);
+      final stream =
+          response.stream.transform(utf8.decoder).transform(LineSplitter());
+      List<String> eventDataList = [];
+      stream.listen(
+        (event) {
+          if (event.startsWith('data:')) {
+            final data = event.substring(5); // 解析 SSE 数据
+            if (kDebugMode) {
+              print('Received event: $data');
+            }
+            eventDataList.add(data); // 将数据添加到缓冲区
           }
+        },
+        onDone: () {
+          // 处理最终结果
+          print('Stream is done');
+          try {
+            var userId = '';
+            StringBuffer buffer = StringBuffer();
+            for (var data in eventDataList) {
+              var jsonData = jsonDecode(data);
+              var resultContent = jsonData['result']['output'];
+              userId = resultContent['metadata']['id'];
+              print('Result content: $resultContent');
+              buffer.write(resultContent["content"]);
+            }
 
-          // 保存AI回复到聊天记录
-          _chatHistory.add({"role": "assistant", "content": buffer.toString()});
-          final resultMessage = types.TextMessage(
-            author: types.User(
-              id: userId,
-            ),
-            createdAt: DateTime.now().millisecondsSinceEpoch,
-            id: const Uuid().v4(),
-            text: buffer.toString(),
-          );
-          _addMessage(resultMessage);
-        } catch (e) {
-          print('Error parsing JSON: $e');
-        }
-      },
-      onError: (error) {
-        print('Stream error: $error');
-      },
-    );
+            // 保存AI回复到聊天记录
+            _chatHistory
+                .add({"role": "assistant", "content": buffer.toString()});
+            final resultMessage = types.TextMessage(
+              author: types.User(
+                id: userId,
+              ),
+              createdAt: DateTime.now().millisecondsSinceEpoch,
+              id: const Uuid().v4(),
+              text: buffer.toString(),
+            );
+            _addMessage(resultMessage);
+          } catch (e) {
+            print('Error parsing JSON: $e');
+          }
+        },
+        onError: (error) {
+          print('Stream error: $error');
+        },
+      );
+    }
   }
 
   void _loadMessages() async {
@@ -256,7 +283,6 @@ class _ChatPageState extends State<ChatPage> {
         final msg = value["data"][i];
         print("msg:: " + i.toString() + "     " + msg["createTime"]);
         DateFormat inputForma = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-
         if (msg["role"] == "user") {
           final textMessage = types.TextMessage(
             author: _user,
