@@ -208,27 +208,54 @@ class _ChatPageState extends State<ChatPage> {
         (message.text.contains("生成") && message.text.contains("图片"))) {
       photo = true;
     }
+    // if (photo) {
+    //   MyHttpClient.post("/qianfan/ai/image", chatmsg).then((value) {
+    //     _chatHistory
+    //         .add({"role": "assistant", "content": value["image"]});
+    //     final resultMessage = types.ImageMessage(
+    //       author: const types.User(
+    //         id: "4c2307ba-3d40-442f-b1ff-b271f63904ca",
+    //       ),
+    //       name: "image.png",
+    //       createdAt: DateTime.now().millisecondsSinceEpoch,
+    //       id: const Uuid().v4(),
+    //       uri: value["image"],
+    //
+    //       size: 10550000,
+    //     );
+    //     _addMessage(resultMessage);
+    //   });
+    // }
     if (photo) {
       MyHttpClient.post("/qianfan/ai/image", chatmsg).then((value) {
-        _chatHistory
-            .add({"role": "assistant", "content": value["image"]});
+        print("value: $value");
+        // 确保字段存在并非 null
+        final imageName = value["name"] ?? "unknown";
+        final imageId = value["imageId"] ?? "unknown";
+        final imageUri = value["uri"] ?? "unknown";
+        final imageSize = value["size"] ?? 0;
+        print("imageName: $imageName, imageId: $imageId, imageUri: $imageUri, imageSize: $imageSize");
+        // 更新聊天记录
+        _chatHistory.add({"role": "assistant", "content": imageUri});
+
+        // 创建 ImageMessage 对象
         final resultMessage = types.ImageMessage(
           author: const types.User(
             id: "4c2307ba-3d40-442f-b1ff-b271f63904ca",
           ),
-          name: "image.png",
-          createdAt: DateTime.now().millisecondsSinceEpoch,
-          id: const Uuid().v4(),
-          uri: value["image"],
-          size: 10550000,
+          name: imageName,
+          id: imageId,
+          uri: imageUri,
+          size: imageSize,
         );
         _addMessage(resultMessage);
+      }).catchError((error) {
+        // 捕获并处理错误
+        print("Request Error: $error");
       });
     } else {
-      final response =
-          await MyHttpClient.postStream("/qianfan/ai/generateStream", chatmsg);
-      final stream =
-          response.stream.transform(utf8.decoder).transform(LineSplitter());
+      final response = await MyHttpClient.postStream("/qianfan/ai/generateStream", chatmsg);
+      final stream = response.stream.transform(utf8.decoder).transform(LineSplitter());
       List<String> eventDataList = [];
       stream.listen(
         (event) {
@@ -294,15 +321,33 @@ class _ChatPageState extends State<ChatPage> {
           _addMessage(textMessage);
         } else {
           _lastAnswer = msg["msg"];
-          final textMessage = types.TextMessage(
-            author: types.User(
-                id: "4c2307ba-3d40-442f-b1ff-b271f63904ca", firstName: "Ai"),
-            createdAt:
-                inputForma.parse(msg["createTime"]).millisecondsSinceEpoch,
-            id: msg["id"],
-            text: msg["msg"],
-          );
-          _addMessage(textMessage);
+          if (msg["msgType"] == "image") {
+            final imageMessage = types.ImageMessage(
+              author: types.User(
+                  id: "4c2307ba-3d40-442f-b1ff-b271f63904ca", firstName: "Ai"),
+              createdAt:
+              inputForma
+                  .parse(msg["createTime"])
+                  .millisecondsSinceEpoch,
+              id: msg["id"],
+              uri: msg["msg"],
+              name: "image.png",
+             size: msg["size"],
+            );
+            _addMessage(imageMessage);
+          } else {
+            final textMessage = types.TextMessage(
+              author: types.User(
+                  id: "4c2307ba-3d40-442f-b1ff-b271f63904ca", firstName: "Ai"),
+              createdAt:
+              inputForma
+                  .parse(msg["createTime"])
+                  .millisecondsSinceEpoch,
+              id: msg["id"],
+              text: msg["msg"],
+            );
+            _addMessage(textMessage);
+          }
         }
       }
     });

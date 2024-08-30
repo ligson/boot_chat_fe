@@ -37,6 +37,20 @@ class _MainPageState extends State<MainPage> {
                         }).catchError((error) {
                           print(error);
                         });
+                      case 'clear_msg':
+                        MyHttpClient.post("/api/msg/clear", {})
+                            .then((value) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('清理完成'),
+                          ));
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => ChatPage()),
+                          );
+                        }).catchError((error) {
+                          print(error);
+                        });
+
                         break;
                     }
                   },
@@ -47,6 +61,11 @@ class _MainPageState extends State<MainPage> {
                       // icon: Icon(Icons.logout),
                       child: Text('退出登录'),
                     ),
+                        PopupMenuItem<String>(
+                          value: 'clear_msg',
+                          // icon: Icon(Icons.logout),
+                          child: Text('清空聊天记录'),
+                        ),
                   ],
                 )
                 // IconButton(
