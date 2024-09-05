@@ -227,7 +227,7 @@ class _ChatPageState extends State<ChatPage> {
     //   });
     // }
     if (photo) {
-      MyHttpClient.post("/qianfan/ai/image", chatmsg).then((value) {
+      MyHttpClient.post("/api/msg/ai/image", chatmsg).then((value) {
         print("value: $value");
         // 确保字段存在并非 null
         final imageName = value["name"] ?? "unknown";
@@ -254,7 +254,7 @@ class _ChatPageState extends State<ChatPage> {
         print("Request Error: $error");
       });
     } else {
-      final response = await MyHttpClient.postStream("/qianfan/ai/generateStream", chatmsg);
+      final response = await MyHttpClient.postStream("/api/msg/ai/generateStream", chatmsg);
       final stream = response.stream.transform(utf8.decoder).transform(LineSplitter());
       List<String> eventDataList = [];
       stream.listen(
